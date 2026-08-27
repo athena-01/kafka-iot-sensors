@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_capteurs
+    environment:
+      POSTGRES_USER:     user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB:       capteurs_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d capteurs_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - reseau-isri
+
+  consommateur-sauvegarde:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.sauvegarde
+    container_name: consommateur_sauvegarde
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER:  kafka1:19092  # ← MODIFIÉ pour pointer sur ton vrai conteneur Kafka
+      KAFKA_TOPIC:   capteurs-topic
+      DB_HOST:       postgres
+      DB_PORT:       5432
+      DB_NAME:       capteurs_db
+      DB_USER:       user
+      DB_PASSWORD:   password
+    volumes:
+      - ../../logs:/app/logs
+    networks:
+      - reseau-isri
+    restart: on-failure
+
+  consommateur-moyenne:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.moyenne
+    container_name: consommateur_moyenne
+    ports:
+      - "8081:8081"
+    environment:
+      KAFKA_BROKER:    kafka1:19092 # ← MODIFIÉ pour pointer sur ton vrai conteneur Kafka
+      KAFKA_TOPIC:     capteurs-topic
+      TAILLE_FENETRE:  5
+    volumes:
+      - ../../logs:/app/logs
+    networks:
+      - reseau-isri
+    restart: on-failure
+
+volumes:
+  pgdata:
+  logs-sauvegarde:
+  logs-moyenne:
+
+# ── CONFIGURATION RÉSEAU MODIFIÉE POUR ÉVITER L'ERREUR ──
+networks:
+  reseau-isri:
+    external: true
+    name: reseau-isri  # ◄ FORCE LE NOM DE RÉSEAU EXACT

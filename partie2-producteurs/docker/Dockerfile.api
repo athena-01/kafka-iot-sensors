@@ -1,0 +1,38 @@
+# ════════════════════════════════════════════════════════════════
+# Dockerfile – Producteur API Web (OpenWeatherMap)
+# ════════════════════════════════════════════════════════════════
+# Usage :
+#   docker build -t producteur-api -f docker/Dockerfile.api .
+#   docker run -e OPENWEATHER_API_KEY=votre_cle producteur-api
+# ════════════════════════════════════════════════════════════════
+
+# ── Étape 1 : Build Maven ────────────────────────────────────────
+FROM maven:3.9-eclipse-temurin-21 AS build
+
+WORKDIR /app
+
+# Copie le pom parent d'abord pour résoudre l'héritage Maven
+
+COPY pom.xml .
+COPY partie2-producteurs/pom.xml partie2-producteurs/pom.xml
+COPY partie2-producteurs/src partie2-producteurs/src
+
+WORKDIR /app/partie2-producteurs
+
+RUN mvn package -q -DskipTests
+
+# ── Étape 2 : Image d'exécution légère ───────────────────────────
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Uniquement le fat JAR de la version API
+COPY --from=build /app/partie2-producteurs/target/producteur-api-fat.jar app.jar
+
+ENV KAFKA_BROKER=kafka1:19092
+ENV KAFKA_TOPIC=capteurs-topic
+ENV OPENWEATHER_API_KEY="4727fe3a0de0156c59ae21c0e063d32f"
+ENV VILLES="Amiens,FR;Paris,FR;Lyon,FR"
+ENV INTERVALLE_SECONDES=60
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

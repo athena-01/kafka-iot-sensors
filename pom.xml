@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    ╔══════════════════════════════════════════════════════════════╗
+    ║         PROJET PARENT – KafkaIsri2026                        ║
+    ║         Master ISRI M1 – Programmation Évènementielle        ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  Structure multi-modules Maven :                             ║
+    ║   • partie1-infrastructure  (Personne 1 – Kafka + Docker)    ║
+    ║   • partie2-producteurs     (Personne 2 – Capteurs + VT)     ║
+    ║   • partie3-monitoring      (Personne 3 – Prometheus/Grafana)║
+    ║   • partie4-consommateurs   (Personne 4 – DB + Moyennes)     ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  Chaque module compile et se lance indépendamment.           ║
+    ║  Les modules partagent les dépendances définies ici.         ║
+    ╚══════════════════════════════════════════════════════════════╝
+    -->
+
+    <groupId>fr.upjv</groupId>
+    <artifactId>KafkaIsri2026</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <!-- Déclaration de tous les modules du projet -->
+    <modules>
+        <module>partie1-infrastructure</module>
+        <module>partie2-producteurs</module>
+        <module>partie4-consommateurs</module>
+        <!-- partie3-monitoring et partie4-consommateurs à ajouter par les autres membres -->
+    </modules>
+
+    <properties>
+        <!-- Java 21 : version LTS avec Virtual Threads stables -->
+        <!-- 25 LTS pour garantir la compatibilité Docker
+             et la stabilité -->
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Versions centralisées – à modifier ici uniquement -->
+        <kafka.version>4.2.0</kafka.version>
+        <jackson.version>2.18.6</jackson.version>
+    </properties>
+
+    <!--
+        dependencyManagement : définit les versions SANS les imposer.
+        Chaque module déclare les dépendances qu'il veut ; les versions
+        sont héritées d'ici automatiquement.
+    -->
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- Client Kafka (producteurs, consommateurs, admin) -->
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+
+            <!-- Jackson : sérialisation/désérialisation JSON -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Plugin pour créer des fat JARs exécutables (pour Docker) -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

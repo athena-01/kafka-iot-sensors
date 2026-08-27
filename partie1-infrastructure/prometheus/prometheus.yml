@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'consommateur-moyenne-glissante'
+    static_configs:
+      - targets: ['consommateur_moyenne:8081']
+
+  - job_name: 'consommateur-sauvegarde-brute'
+    static_configs:
+      - targets: ['consommateur_sauvegarde:8082']

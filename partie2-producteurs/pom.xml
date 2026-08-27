@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Module : partie2-producteurs
+        Auteur : Personne 2
+        Rôle   : Génération de données (températures, tensions)
+                 N capteurs simultanés via Virtual Threads (Java 21+)
+                 Version de base  : données simulées
+                 Version évoluée  : données réelles (OpenWeatherMap API)
+    -->
+
+    <parent>
+        <groupId>fr.upjv</groupId>
+        <artifactId>KafkaIsri2026</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>partie2-producteurs</artifactId>
+
+    <dependencies>
+        <!-- Client Kafka : version héritée du parent -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+
+        <!-- Jackson : sérialisation/désérialisation JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Jackson JavaTimeModule : support de LocalDateTime -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Maven Shade Plugin : crée un "fat JAR" contenant toutes les
+                dépendances. Nécessaire pour la dockerisation (le conteneur
+                n'a pas Maven, il exécute directement le JAR).
+
+                Deux exécutions :
+                  1. producteur-base-fat.jar  → ProducteurVirtuel (simulation)
+                  2. producteur-api-fat.jar   → ProducteurApiWeb (données réelles)
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+
+                    <!-- Fat JAR version de base -->
+                    <execution>
+                        <id>shade-base</id>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <finalName>producteur-base-fat</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>fr.upjv.producteur.base.ProducteurVirtuel</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+
+                    <!-- Fat JAR version évoluée (API Web) -->
+                    <execution>
+                        <id>shade-api</id>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <finalName>producteur-api-fat</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>fr.upjv.producteur.evolue.ProducteurApiWeb</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

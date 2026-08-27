@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  CONFIGURATION LOG4J 2                                       ║
+    ║  Personne 4 – Projet ISRI M1 2026                           ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  Deux appenders (sorties de log) :                           ║
+    ║   • Console     → affiche les logs dans le terminal          ║
+    ║   • RollingFile → écrit les logs dans un fichier,            ║
+    ║                   archivé automatiquement chaque jour        ║
+    ╚══════════════════════════════════════════════════════════════╝
+-->
+<Configuration status="WARN">
+    <!--
+        status="WARN" : niveau de log interne de Log4J lui-même.
+        On ne veut voir que les avertissements de Log4J, pas ses
+        messages de debug internes.
+    -->
+
+    <Appenders>
+
+        <!--
+            ══════════════════════════════════════════════════════
+            APPENDER 1 : Console
+            ══════════════════════════════════════════════════════
+            Affiche les logs dans System.out (terminal).
+
+            PatternLayout : format de chaque ligne de log.
+              %d{HH:mm:ss.SSS}  → heure (ex: 14:32:05.123)
+              %-5level          → niveau aligné sur 5 chars (INFO , WARN , ERROR)
+              %logger{36}       → nom de la classe (tronqué à 36 chars)
+              %msg              → le message de log
+              %n                → saut de ligne
+        -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout
+                pattern="%d{HH:mm:ss.SSS} | %-5level | %logger{36} | %msg%n"/>
+        </Console>
+
+        <!--
+            ══════════════════════════════════════════════════════
+            APPENDER 2 : RollingFile
+            ══════════════════════════════════════════════════════
+            Écrit les logs dans un fichier.
+            "Rolling" = rotation automatique selon une politique.
+
+            fileName        : fichier courant (log du jour)
+            filePattern     : nom du fichier archivé (avec la date)
+                              Ex : logs/app-2026-06-05.log.gz
+
+            TimeBasedTriggeringPolicy : rotation chaque jour à minuit.
+            DefaultRolloverStrategy(max=30) : garde 30 jours d'archives.
+
+            Même PatternLayout que la console, mais avec la date complète
+            pour faciliter la recherche dans les archives.
+        -->
+        <RollingFile name="Fichier"
+                     fileName="logs/consommateurs.log"
+                     filePattern="logs/consommateurs-%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout
+                pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} | %-5level | %logger{36} | %msg%n"/>
+            <Policies>
+                <!-- Rotation quotidienne -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <!-- Rotation aussi si le fichier dépasse 10 Mo -->
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <!-- Conserver au maximum 30 fichiers archivés -->
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+    </Appenders>
+
+    <Loggers>
+        <!--
+            ══════════════════════════════════════════════════════
+            LOGGER RACINE (Root)
+            ══════════════════════════════════════════════════════
+            S'applique à TOUTES les classes du projet.
+
+            level="info" : on logue INFO, WARN et ERROR.
+            Pour voir les messages DEBUG (détail des fenêtres),
+            passer level="debug".
+
+            Les deux AppenderRef activent les deux sorties
+            simultanément : console ET fichier.
+        -->
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="Fichier"/>
+        </Root>
+
+        <!--
+            Logger spécifique pour nos classes :
+            Permet de contrôler le niveau indépendamment
+            des bibliothèques tierces (Kafka, Jackson, etc.)
+            qui peuvent être très verbeux en DEBUG.
+        -->
+        <Logger name="fr.upjv" level="info" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="Fichier"/>
+        </Logger>
+
+        <!--
+            Réduire le bruit des bibliothèques Kafka et Jackson
+            en ne montrant que leurs avertissements et erreurs.
+        -->
+        <Logger name="org.apache.kafka" level="warn"  additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="Fichier"/>
+        </Logger>
+        <Logger name="com.fasterxml"    level="warn"  additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="Fichier"/>
+        </Logger>
+
+    </Loggers>
+
+</Configuration>

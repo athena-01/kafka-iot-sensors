@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Module : partie4-consommateurs
+        Auteur : Personne 4
+        Rôle   : Consommation des messages Kafka produits par ProducteurApiWeb
+                  • ConsommateurSauvegarde  → insère chaque mesure en base PostgreSQL (JDBC)
+                  • ConsommateurMoyenne     → calcule la moyenne fenêtrée et la logue (Log4J)
+    -->
+
+    <parent>
+        <groupId>fr.upjv</groupId>
+        <artifactId>KafkaIsri2026</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>partie4-consommateurs</artifactId>
+
+    <dependencies>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Client Kafka : version héritée du pom parent (4.2.0)
+             Fournit KafkaConsumer, ConsumerRecord, etc.
+             ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Jackson : désérialisation JSON → MesureCapteur
+             Même version que la partie2 (cohérence du projet)
+             ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Driver JDBC PostgreSQL
+             Permet à Java de se connecter à PostgreSQL via JDBC.
+             URL de connexion : jdbc:postgresql://host:5432/db
+             ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Log4J 2 — API de logging
+             log4j-api  : interface utilisée dans le code (Logger)
+             log4j-core : implémentation (appenders, fichiers, etc.)
+             ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.23.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.23.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient</artifactId>
+            <version>0.16.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient_httpserver</artifactId>
+            <version>0.16.0</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Maven Shade Plugin : crée des fat JARs exécutables.
+                Deux JARs produits lors du "mvn package" :
+                  • consommateur-sauvegarde-fat.jar  (main = ConsommateurSauvegarde)
+                  • consommateur-moyenne-fat.jar     (main = ConsommateurMoyenne)
+                Nécessaire pour la dockerisation : le conteneur
+                n'a pas Maven, il lance directement java -jar xxx.jar
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+
+                    <!-- Fat JAR consommateur de sauvegarde -->
+                    <execution>
+                        <id>shade-sauvegarde</id>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <finalName>consommateur-sauvegarde-fat</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>fr.upjv.consommateur.ConsommateurSauvegarde</mainClass>
+                                </transformer>
+                                <!-- Nécessaire pour Log4J : fusionne les fichiers de config des plugins -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+
+                    <!-- Fat JAR consommateur de moyenne -->
+                    <execution>
+                        <id>shade-moyenne</id>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <finalName>consommateur-moyenne-fat</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>fr.upjv.consommateur.ConsommateurMoyenne</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

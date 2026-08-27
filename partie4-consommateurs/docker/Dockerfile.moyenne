@@ -1,0 +1,17 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  DOCKERFILE – Consommateur Moyenne Fenêtrée                      ║
+# ║  Personne 4 – Projet ISRI M1 2026                               ║
+# ╠══════════════════════════════════════════════════════════════════╣
+# ║  PRÉREQUIS : compiler le JAR avec Maven AVANT docker compose     ║
+# ║    mvn package -pl partie4-consommateurs -am -DskipTests         ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+RUN mkdir -p /app/logs
+
+COPY target/consommateur-moyenne-fat.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,25 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  DOCKERFILE – Consommateur Sauvegarde                            ║
+# ║  Personne 4 – Projet ISRI M1 2026                               ║
+# ╠══════════════════════════════════════════════════════════════════╣
+# ║  PRÉREQUIS : compiler le JAR avec Maven AVANT docker compose     ║
+# ║    mvn package -pl partie4-consommateurs -am -DskipTests         ║
+# ║                                                                  ║
+# ║  Le Dockerfile copie uniquement le JAR déjà compilé.            ║
+# ║  Cela évite les problèmes de contexte Docker dans un projet      ║
+# ║  Maven multi-modules.                                            ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Créer le dossier logs (monté en volume dans docker-compose)
+RUN mkdir -p /app/logs
+
+# Copier le fat JAR déjà compilé par Maven
+# Le contexte de build est ../  (racine de partie4-consommateurs)
+# donc le JAR est accessible via target/
+COPY target/consommateur-sauvegarde-fat.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
